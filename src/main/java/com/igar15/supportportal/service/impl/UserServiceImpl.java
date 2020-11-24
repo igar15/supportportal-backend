@@ -17,8 +17,10 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.util.Date;
 import java.util.List;
@@ -27,17 +29,24 @@ import java.util.List;
 @Transactional
 public class UserServiceImpl implements UserService, UserDetailsService {
 
+    public static final String USERNAME_ALREADY_EXISTS = "Username already exists";
+    public static final String EMAIL_ALREADY_EXISTS = "Email already exists";
+    public static final String NO_USER_FOUND_WITH_USERNAME = "No user found with username";
+
     private Logger logger = LoggerFactory.getLogger(UserServiceImpl.class);
 
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private BCryptPasswordEncoder passwordEncoder;
+
     @Override
     public UserDetails loadUserByUsername(String userName) throws UsernameNotFoundException {
         User user = userRepository.findUserByUserName(userName);
         if (user == null) {
-            logger.error("User not found by username: {}", userName);
-            throw new UsernameNotFoundException("User not found by username: " + userName);
+            logger.error(NO_USER_FOUND_WITH_USERNAME + ": {}", userName);
+            throw new UsernameNotFoundException(NO_USER_FOUND_WITH_USERNAME + " " + userName);
         }
         else {
             user.setLastLoginDateDisplay(user.getLastLoginDate());
@@ -51,7 +60,7 @@ public class UserServiceImpl implements UserService, UserDetailsService {
 
     @Override
     public User register(String firstName, String lastName, String username, String email) {
-        validateNewUsernameAndEmail("", userName, email); // this is a register method, so we put empty string instead of currentUsername
+        validateNewUsernameAndEmail("", username, email); // this is a register method, so we put empty string instead of currentUsername
         User user = new User();
         user.setUserId(generateUserId());
         String password = generatePassword();
@@ -67,9 +76,17 @@ public class UserServiceImpl implements UserService, UserDetailsService {
         user.setRole(Role.ROLE_USER.name());
         user.setAuthorities(Role.ROLE_USER.getAuthorities());
         user.setProfileImageUrl(getTemporaryProfileImageUrl());
-        User save = userRepository.save(user);
+        userRepository.save(user);
         logger.info("New user password: " + password);
-        return null;
+        return user;
+    }
+
+    private String getTemporaryProfileImageUrl() {
+        return ServletUriComponentsBuilder.fromCurrentContextPath().path("/user/image/profile/temp").toUriString();
+    }
+
+    private String encodePassword(String password) {
+        return passwordEncoder.encode(password);
     }
 
     private String generatePassword() {
@@ -81,29 +98,28 @@ public class UserServiceImpl implements UserService, UserDetailsService {
     }
 
     private User validateNewUsernameAndEmail(String currentUsername, String newUsername, String newEmail) {
+        User userByNewUserName = userRepository.findUserByUserName(newUsername);
+        User userByNewEmail = userRepository.findUserByEmail(newEmail);
+
         if (!currentUsername.isBlank()) {
             User currentUser = userRepository.findUserByUserName(currentUsername);
             if (currentUser == null) {
-                throw new UserNotFoundException("No user found with username " + currentUsername);
+                throw new UserNotFoundException(NO_USER_FOUND_WITH_USERNAME + " " + currentUsername);
             }
-            User userByUserName = userRepository.findUserByUserName(newUsername);
-            if (userByUserName != null && !currentUser.getId().equals(userByUserName.getId())) {
-                throw new UsernameExistException("Username already exists");
+            if (userByNewUserName != null && !currentUser.getId().equals(userByNewUserName.getId())) {
+                throw new UsernameExistException(USERNAME_ALREADY_EXISTS);
             }
-            User userByEmail = userRepository.findUserByEmail(newEmail);
-            if (userByEmail != null && !currentUser.getId().equals(userByEmail.getId())) {
-                throw new EmailExistException("Email already exists");
+            if (userByNewEmail != null && !currentUser.getId().equals(userByNewEmail.getId())) {
+                throw new EmailExistException(EMAIL_ALREADY_EXISTS);
             }
             return currentUser;
         }
         else {
-            User userByUserName = userRepository.findUserByUserName(newUsername);
-            if (userByUserName != null) {
-                throw new UsernameExistException("Username already exists");
+            if (userByNewUserName != null) {
+                throw new UsernameExistException(USERNAME_ALREADY_EXISTS);
             }
-            User userByEmail = userRepository.findUserByEmail(newEmail);
-            if (userByEmail != null) {
-                throw new EmailExistException("Email already exists");
+            if (userByNewEmail != null) {
+                throw new EmailExistException(EMAIL_ALREADY_EXISTS);
             }
             return null;
         }
@@ -111,16 +127,16 @@ public class UserServiceImpl implements UserService, UserDetailsService {
 
     @Override
     public List<User> getUsers() {
-        return null;
+        return userRepository.findAll();
     }
 
     @Override
     public User findUserByUsername(String username) {
-        return null;
+        return userRepository.findUserByUserName(username);
     }
 
     @Override
     public User findUserByEmail(String email) {
-        return null;
+        return userRepository.findUserByEmail(email);
     }
 }
