@@ -7,6 +7,7 @@ import com.igar15.supportportal.exception.domain.EmailExistException;
 import com.igar15.supportportal.exception.domain.UserNotFoundException;
 import com.igar15.supportportal.exception.domain.UsernameExistException;
 import com.igar15.supportportal.repository.UserRepository;
+import com.igar15.supportportal.service.LoginAttemptService;
 import com.igar15.supportportal.service.UserService;
 import net.bytebuddy.utility.RandomString;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -41,6 +42,9 @@ public class UserServiceImpl implements UserService, UserDetailsService {
     @Autowired
     private BCryptPasswordEncoder passwordEncoder;
 
+    @Autowired
+    private LoginAttemptService loginAttemptService;
+
     @Override
     public UserDetails loadUserByUsername(String userName) throws UsernameNotFoundException {
         User user = userRepository.findUserByUserName(userName);
@@ -49,12 +53,24 @@ public class UserServiceImpl implements UserService, UserDetailsService {
             throw new UsernameNotFoundException(NO_USER_FOUND_WITH_USERNAME + " " + userName);
         }
         else {
+            validateLoginAttempt(user);
             user.setLastLoginDateDisplay(user.getLastLoginDate());
             user.setLastLoginDate(new Date());
             userRepository.save(user);
             UserPrincipal userPrincipal = new UserPrincipal(user);
             logger.info("Returning found user by username: {}", userName);
             return userPrincipal;
+        }
+    }
+
+    private void validateLoginAttempt(User user) {
+        if (user.isNotLocked()) {   // if user is not locked
+            if (loginAttemptService.hasExceededMaxAttempts(user.getUserName())) {
+                user.setNotLocked(false);
+            }
+        }
+        else {
+            loginAttemptService.evictUserFromLoginAttemptCache(user.getUserName());
         }
     }
 
