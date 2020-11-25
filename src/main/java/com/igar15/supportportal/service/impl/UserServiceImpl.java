@@ -7,6 +7,7 @@ import com.igar15.supportportal.exception.domain.EmailExistException;
 import com.igar15.supportportal.exception.domain.UserNotFoundException;
 import com.igar15.supportportal.exception.domain.UsernameExistException;
 import com.igar15.supportportal.repository.UserRepository;
+import com.igar15.supportportal.service.EmailService;
 import com.igar15.supportportal.service.LoginAttemptService;
 import com.igar15.supportportal.service.UserService;
 import net.bytebuddy.utility.RandomString;
@@ -23,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import javax.mail.MessagingException;
 import java.util.Date;
 import java.util.List;
 
@@ -44,6 +46,9 @@ public class UserServiceImpl implements UserService, UserDetailsService {
 
     @Autowired
     private LoginAttemptService loginAttemptService;
+
+    @Autowired
+    private EmailService emailService;
 
     @Override
     public UserDetails loadUserByUsername(String userName) throws UsernameNotFoundException {
@@ -75,7 +80,7 @@ public class UserServiceImpl implements UserService, UserDetailsService {
     }
 
     @Override
-    public User register(String firstName, String lastName, String username, String email) {
+    public User register(String firstName, String lastName, String username, String email) throws MessagingException {
         validateNewUsernameAndEmail("", username, email); // this is a register method, so we put empty string instead of currentUsername
         User user = new User();
         user.setUserId(generateUserId());
@@ -93,7 +98,7 @@ public class UserServiceImpl implements UserService, UserDetailsService {
         user.setAuthorities(Role.ROLE_USER.getAuthorities());
         user.setProfileImageUrl(getTemporaryProfileImageUrl());
         userRepository.save(user);
-        logger.info("New user password: " + password);
+        emailService.sendNewPasswordEmail(firstName, password, email);
         return user;
     }
 
