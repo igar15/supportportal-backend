@@ -5,7 +5,6 @@ import com.igar15.supportportal.constant.SecurityConstant;
 import com.igar15.supportportal.domain.HttpResponse;
 import com.igar15.supportportal.domain.User;
 import com.igar15.supportportal.domain.UserPrincipal;
-import com.igar15.supportportal.exception.domain.EmailExistException;
 import com.igar15.supportportal.service.UserService;
 import com.igar15.supportportal.utility.JwtTokenProvider;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +19,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.mail.MessagingException;
-import javax.mail.Multipart;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
