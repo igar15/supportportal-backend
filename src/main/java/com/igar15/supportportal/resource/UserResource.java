@@ -82,7 +82,7 @@ public class UserResource {
     }
 
     @PostMapping("/update")
-    public ResponseEntity<User> update(@RequestParam("currentUsername") String currentUsername,
+    public ResponseEntity<User> update(@RequestParam("currentUserName") String currentUsername,
                                            @RequestParam("firstName") String firstName,
                                            @RequestParam("lastName") String lastName,
                                            @RequestParam("userName") String username,
