@@ -118,7 +118,7 @@ public class UserResource {
     @PreAuthorize(value = "hasAnyAuthority('user:delete')")
     public ResponseEntity<HttpResponse> deleteUser(@PathVariable("id") long id) {
         userService.deleteUser(id);
-        return response(HttpStatus.NO_CONTENT, "User deleted successfully");
+        return response(HttpStatus.OK, "User deleted successfully");
     }
 
     @PostMapping("/updateProfileImage")
