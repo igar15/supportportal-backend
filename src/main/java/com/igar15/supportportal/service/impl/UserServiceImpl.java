@@ -15,10 +15,12 @@ import com.igar15.supportportal.service.LoginAttemptService;
 import com.igar15.supportportal.service.UserService;
 import net.bytebuddy.utility.RandomString;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.tomcat.util.http.fileupload.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -94,6 +96,7 @@ public class UserServiceImpl implements UserService, UserDetailsService {
         user.setProfileImageUrl(getTemporaryProfileImageUrl(username));
         userRepository.save(user);
         emailService.sendNewPasswordEmail(firstName, password, email);
+        logger.info("the password is {}", password);
         return user;
     }
 
@@ -151,8 +154,10 @@ public class UserServiceImpl implements UserService, UserDetailsService {
     }
 
     @Override
-    public void deleteUser(long id) {
-        userRepository.deleteById(id);
+    public void deleteUser(String userName) throws IOException {
+        userRepository.deleteUserByUserName(userName);
+        Path userFolder = Paths.get(FileConstant.USER_FOLDER + userName).toAbsolutePath().normalize();
+        FileUtils.deleteDirectory(new File(userFolder.toString()));
     }
 
     @Override
@@ -239,6 +244,9 @@ public class UserServiceImpl implements UserService, UserDetailsService {
 
     private void saveProfileImage(User user, MultipartFile profileImage) throws IOException {
         if (profileImage != null) {
+            if (!List.of(MediaType.IMAGE_JPEG_VALUE, MediaType.IMAGE_PNG_VALUE, MediaType.IMAGE_GIF_VALUE).contains(profileImage.getContentType())) {
+                throw new IllegalArgumentException(profileImage.getOriginalFilename() + " is not an image. Please upload ai image");
+            }
             Path userFolder = Paths.get(FileConstant.USER_FOLDER + user.getUserName()).toAbsolutePath().normalize();
             if (!Files.exists(userFolder)) {
                 Files.createDirectories(userFolder);

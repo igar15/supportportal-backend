@@ -114,10 +114,10 @@ public class UserResource {
         return response(HttpStatus.OK, "The email with your new password was send to " + email);
     }
 
-    @DeleteMapping("/delete/{id}")
-    @PreAuthorize(value = "hasAnyAuthority('user:delete')")
-    public ResponseEntity<HttpResponse> deleteUser(@PathVariable("id") long id) {
-        userService.deleteUser(id);
+    @DeleteMapping("/delete/{userName}")
+//    @PreAuthorize(value = "hasAnyAuthority('user:delete')")
+    public ResponseEntity<HttpResponse> deleteUser(@PathVariable("userName") String userName) throws IOException {
+        userService.deleteUser(userName);
         return response(HttpStatus.OK, "User deleted successfully");
     }
 
